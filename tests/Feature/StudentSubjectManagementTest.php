@@ -159,7 +159,7 @@ class StudentSubjectManagementTest extends TestCase
         $response = $this->actingAs($this->user)->delete(route('students.destroy', $student->id));
 
         $response->assertRedirect(route('students.index'));
-        $this->assertDatabaseMissing('students', [
+        $this->assertSoftDeleted('students', [
             'id' => $student->id,
         ]);
     }

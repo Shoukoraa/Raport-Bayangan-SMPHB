@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-uts-layout>
     <div x-data="{
         paperSize: 'a4',
         spacing: 'normal',
@@ -64,12 +64,12 @@
 
                     <!-- TOMBOL AKSI UTAMA -->
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('settings.school') }}" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-lg shadow-sm text-xs flex items-center gap-1 transition-all" title="Edit Kop Surat & Nama Kegiatan">
+                        <a href="{{ route('uts.settings.school') }}" class="bg-amber-700 hover:bg-amber-800 text-white font-bold py-2 px-3 rounded-lg shadow-sm text-xs flex items-center gap-1 transition-all" title="Edit Kop Surat & Nama Kegiatan UTS">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            Edit Kop Surat
+                            Edit Kop UTS
                         </a>
-                        <a href="{{ route('reports.index') }}" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all">
-                            Kembali
+                        <a href="{{ route('reports.index') }}" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all">
+                            &larr; Kembali ke Raport UTS
                         </a>
                         <button onclick="window.print()" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-lg shadow-md text-xs flex items-center gap-1.5 transition-all">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
@@ -273,7 +273,9 @@
                             </thead>
                             <tbody>
                                 @php
-                                    $sortedGrades = $student->grades->sortBy(fn($g) => $g->subject->order_number ?? 0)->values();
+                                    $activeSubjects = $subjects ?? \App\Models\Subject::where('is_active', true)->orderBy('order_number')->orderBy('id')->get();
+                                    $gradesBySubject = $student->grades->when($academicYear, fn($q) => $q->where('academic_year_id', $academicYear->id))->keyBy('subject_id');
+                                    $activeAttendance = $student->attendanceForYear($academicYear?->id) ?? $student->attendance;
                                     
                                     $allPr = [];
                                     $allUh = [];
@@ -281,26 +283,29 @@
                                     $allPraktek = [];
                                     $allScores = [];
 
-                                    foreach ($sortedGrades as $g) {
-                                        if ($g->pr !== null && is_numeric($g->pr)) {
-                                            $val = (int)round((float)$g->pr);
-                                            $allPr[] = $val;
-                                            $allScores[] = $val;
-                                        }
-                                        if ($g->uh !== null && is_numeric($g->uh)) {
-                                            $val = (int)round((float)$g->uh);
-                                            $allUh[] = $val;
-                                            $allScores[] = $val;
-                                        }
-                                        if ($g->tertulis !== null && is_numeric($g->tertulis)) {
-                                            $val = (int)round((float)$g->tertulis);
-                                            $allTertulis[] = $val;
-                                            $allScores[] = $val;
-                                        }
-                                        if ($g->praktek !== null && is_numeric($g->praktek)) {
-                                            $val = (int)round((float)$g->praktek);
-                                            $allPraktek[] = $val;
-                                            $allScores[] = $val;
+                                    foreach ($activeSubjects as $subj) {
+                                        $g = $gradesBySubject->get($subj->id);
+                                        if ($g) {
+                                            if ($g->pr !== null && is_numeric($g->pr)) {
+                                                $val = (int)round((float)$g->pr);
+                                                $allPr[] = $val;
+                                                $allScores[] = $val;
+                                            }
+                                            if ($g->uh !== null && is_numeric($g->uh)) {
+                                                $val = (int)round((float)$g->uh);
+                                                $allUh[] = $val;
+                                                $allScores[] = $val;
+                                            }
+                                            if ($g->tertulis !== null && is_numeric($g->tertulis)) {
+                                                $val = (int)round((float)$g->tertulis);
+                                                $allTertulis[] = $val;
+                                                $allScores[] = $val;
+                                            }
+                                            if ($g->praktek !== null && is_numeric($g->praktek)) {
+                                                $val = (int)round((float)$g->praktek);
+                                                $allPraktek[] = $val;
+                                                $allScores[] = $val;
+                                            }
                                         }
                                     }
 
@@ -311,18 +316,19 @@
                                     $avgTotal = count($allScores) > 0 ? (int)round(array_sum($allScores) / count($allScores)) : null;
                                 @endphp
 
-                                @foreach($sortedGrades as $index => $grade)
+                                @foreach($activeSubjects as $index => $subject)
                                 @php
-                                    $prVal = $grade->pr !== null && is_numeric($grade->pr) ? (int)round((float)$grade->pr) : null;
-                                    $uhVal = $grade->uh !== null && is_numeric($grade->uh) ? (int)round((float)$grade->uh) : null;
-                                    $trtVal = $grade->tertulis !== null && is_numeric($grade->tertulis) ? (int)round((float)$grade->tertulis) : null;
-                                    $prkVal = $grade->praktek !== null && is_numeric($grade->praktek) ? (int)round((float)$grade->praktek) : null;
+                                    $grade = $gradesBySubject->get($subject->id);
+                                    $prVal = ($grade && $grade->pr !== null && is_numeric($grade->pr)) ? (int)round((float)$grade->pr) : null;
+                                    $uhVal = ($grade && $grade->uh !== null && is_numeric($grade->uh)) ? (int)round((float)$grade->uh) : null;
+                                    $trtVal = ($grade && $grade->tertulis !== null && is_numeric($grade->tertulis)) ? (int)round((float)$grade->tertulis) : null;
+                                    $prkVal = ($grade && $grade->praktek !== null && is_numeric($grade->praktek)) ? (int)round((float)$grade->praktek) : null;
                                 @endphp
                                 <tr>
                                     <td class="border border-black text-center font-normal"
                                         :class="spacing === 'compact' ? 'py-0.5 px-1' : (spacing === 'spacious' ? 'py-1.5 px-2' : 'py-1 px-1.5')">{{ $index + 1 }}</td>
                                     <td class="border border-black font-normal"
-                                        :class="spacing === 'compact' ? 'py-0.5 px-1' : (spacing === 'spacious' ? 'py-1.5 px-2' : 'py-1 px-1.5')">{{ $grade->subject->name }}</td>
+                                        :class="spacing === 'compact' ? 'py-0.5 px-1' : (spacing === 'spacious' ? 'py-1.5 px-2' : 'py-1 px-1.5')">{{ $subject->name }}</td>
                                     <td class="border border-black text-center {{ $prVal !== null && $prVal < 70 ? 'text-red-600 font-bold' : '' }}"
                                         :class="spacing === 'compact' ? 'py-0.5 px-1' : (spacing === 'spacious' ? 'py-1.5 px-2' : 'py-1 px-1.5')">
                                         {{ $prVal !== null ? $prVal : '-' }}
@@ -400,20 +406,20 @@
                                 <div class="col-span-4 border-r border-black text-xs font-semibold">
                                     <div class="grid grid-cols-12 border-b border-black p-1">
                                         <div class="col-span-3 text-center border-r border-black font-bold">S</div>
-                                        <div class="col-span-9 pl-2">Sakit = {{ $student->attendance->sakit ?? 0 }}</div>
+                                        <div class="col-span-9 pl-2">Sakit = {{ $activeAttendance->sakit ?? 0 }}</div>
                                     </div>
                                     <div class="grid grid-cols-12 border-b border-black p-1">
                                         <div class="col-span-3 text-center border-r border-black font-bold">I</div>
-                                        <div class="col-span-9 pl-2">Izin = {{ $student->attendance->izin ?? 0 }}</div>
+                                        <div class="col-span-9 pl-2">Izin = {{ $activeAttendance->izin ?? 0 }}</div>
                                     </div>
                                     <div class="grid grid-cols-12 p-1">
                                         <div class="col-span-3 text-center border-r border-black font-bold">A</div>
-                                        <div class="col-span-9 pl-2">Alpa = {{ $student->attendance->alpa ?? 0 }}</div>
+                                        <div class="col-span-9 pl-2">Alpa = {{ $activeAttendance->alpa ?? 0 }}</div>
                                     </div>
                                 </div>
                                 <!-- Kolom Catatan -->
                                 <div class="col-span-4 border-r border-black p-2 flex items-center justify-center text-center font-medium">
-                                    {{ $student->attendance->note ?? 'Tetap semangat belajar ya nak!' }}
+                                    {{ $activeAttendance->note ?? 'Tetap semangat belajar ya nak!' }}
                                 </div>
                                 <!-- Kolom Tanda Tangan Orang Tua -->
                                 <div class="col-span-4 p-2 flex flex-col justify-end items-center">
@@ -454,4 +460,4 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-uts-layout>

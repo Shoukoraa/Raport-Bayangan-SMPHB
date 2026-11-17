@@ -2,65 +2,114 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreAcademicYearRequest;
-use App\Http\Requests\UpdateAcademicYearRequest;
 use App\Models\AcademicYear;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class AcademicYearController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(): View
     {
-        //
+        $academicYears = AcademicYear::withCount(['studentGrades', 'students', 'attendances'])
+            ->orderByDesc('name')
+            ->orderByDesc('semester')
+            ->get();
+
+        $activeYear = $academicYears->firstWhere('is_active', true);
+
+        return view('academic_years.index', compact('academicYears', 'activeYear'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(Request $request): RedirectResponse
     {
-        //
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:20', 'regex:/^[0-9]{4}\/[0-9]{4}$/'],
+            'semester' => ['required', 'integer', 'in:1,2'],
+            'is_active' => ['nullable', 'boolean'],
+        ], [
+            'name.regex' => 'Format tahun ajaran harus berupa format Tahun/Tahun (contoh: 2026/2027).',
+        ]);
+
+        $exists = AcademicYear::where('name', $validated['name'])
+            ->where('semester', $validated['semester'])
+            ->exists();
+
+        if ($exists) {
+            return back()->withInput()->withErrors([
+                'name' => 'Tahun Pelajaran dan Semester tersebut sudah pernah didaftarkan.',
+            ]);
+        }
+
+        $isActive = $request->boolean('is_active') || AcademicYear::count() === 0;
+
+        if ($isActive) {
+            AcademicYear::where('is_active', true)->update(['is_active' => false]);
+        }
+
+        $academicYear = AcademicYear::create([
+            'name' => $validated['name'],
+            'semester' => $validated['semester'],
+            'is_active' => $isActive,
+        ]);
+
+        return redirect()->route('academic-years.index')->with('success', "Tahun Pelajaran {$academicYear->full_name} berhasil ditambahkan.");
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreAcademicYearRequest $request)
+    public function update(Request $request, AcademicYear $academicYear): RedirectResponse
     {
-        //
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:20', 'regex:/^[0-9]{4}\/[0-9]{4}$/'],
+            'semester' => ['required', 'integer', 'in:1,2'],
+        ], [
+            'name.regex' => 'Format tahun ajaran harus berupa format Tahun/Tahun (contoh: 2026/2027).',
+        ]);
+
+        $exists = AcademicYear::where('name', $validated['name'])
+            ->where('semester', $validated['semester'])
+            ->where('id', '!=', $academicYear->id)
+            ->exists();
+
+        if ($exists) {
+            return back()->withInput()->withErrors([
+                'name' => 'Tahun Pelajaran dan Semester tersebut sudah pernah didaftarkan.',
+            ]);
+        }
+
+        $academicYear->update([
+            'name' => $validated['name'],
+            'semester' => $validated['semester'],
+        ]);
+
+        return redirect()->route('academic-years.index')->with('success', 'Tahun Pelajaran berhasil diperbarui.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(AcademicYear $academicYear)
+    public function setActive(AcademicYear $academicYear): RedirectResponse
     {
-        //
+        AcademicYear::where('is_active', true)->update(['is_active' => false]);
+        $academicYear->update(['is_active' => true]);
+
+        return redirect()->route('academic-years.index')->with('success', "Tahun Pelajaran aktif berhasil diubah ke: {$academicYear->full_name}");
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(AcademicYear $academicYear)
+    public function destroy(AcademicYear $academicYear): RedirectResponse
     {
-        //
-    }
+        if ($academicYear->is_active) {
+            return back()->withErrors([
+                'error' => 'Tahun Pelajaran yang sedang aktif tidak dapat dihapus. Silakan aktifkan tahun pelajaran lain terlebih dahulu.',
+            ]);
+        }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateAcademicYearRequest $request, AcademicYear $academicYear)
-    {
-        //
-    }
+        $gradeCount = $academicYear->studentGrades()->count();
+        if ($gradeCount > 0) {
+            return back()->withErrors([
+                'error' => "Tahun Pelajaran ini tidak dapat dihapus karena menyimpan {$gradeCount} data nilai siswa. Untuk mengamankan riwayat raport, data ini harus tetap ada.",
+            ]);
+        }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(AcademicYear $academicYear)
-    {
-        //
+        $name = $academicYear->full_name;
+        $academicYear->delete();
+
+        return redirect()->route('academic-years.index')->with('success', "Tahun Pelajaran {$name} berhasil dihapus.");
     }
 }

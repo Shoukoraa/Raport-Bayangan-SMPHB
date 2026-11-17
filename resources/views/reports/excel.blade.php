@@ -46,31 +46,52 @@
         <td style="border: 1px solid #000; text-align: center; font-weight: bold;">PRAKTEK</td>
     </tr>
 
-    @foreach($student->grades as $index => $grade)
+    @php
+        $activeSubjects = $subjects ?? \App\Models\Subject::where('is_active', true)->orderBy('order_number')->orderBy('id')->get();
+        $gradesBySubject = $student->grades->keyBy('subject_id');
+        $allPr = [];
+        $allUh = [];
+        $allTertulis = [];
+        $allPraktek = [];
+    @endphp
+
+    @foreach($activeSubjects as $index => $subject)
+    @php
+        $grade = $gradesBySubject->get($subject->id);
+        $pr = ($grade && $grade->pr !== null && is_numeric($grade->pr)) ? (float)$grade->pr : null;
+        $uh = ($grade && $grade->uh !== null && is_numeric($grade->uh)) ? (float)$grade->uh : null;
+        $trt = ($grade && $grade->tertulis !== null && is_numeric($grade->tertulis)) ? (float)$grade->tertulis : null;
+        $prk = ($grade && $grade->praktek !== null && is_numeric($grade->praktek)) ? (float)$grade->praktek : null;
+
+        if ($pr !== null) { $allPr[] = $pr; }
+        if ($uh !== null) { $allUh[] = $uh; }
+        if ($trt !== null) { $allTertulis[] = $trt; }
+        if ($prk !== null) { $allPraktek[] = $prk; }
+    @endphp
     <tr>
         <td style="border: 1px solid #000; text-align: center;">{{ $index + 1 }}</td>
-        <td style="border: 1px solid #000;">{{ $grade->subject->name }}</td>
-        <td style="border: 1px solid #000; text-align: center;">{{ $grade->pr }}</td>
-        <td style="border: 1px solid #000; text-align: center;">{{ $grade->uh }}</td>
-        <td style="border: 1px solid #000; text-align: center;">{{ $grade->tertulis }}</td>
-        <td style="border: 1px solid #000; text-align: center;">{{ $grade->praktek }}</td>
+        <td style="border: 1px solid #000;">{{ $subject->name }}</td>
+        <td style="border: 1px solid #000; text-align: center;">{{ $pr !== null ? $pr : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center;">{{ $uh !== null ? $uh : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center;">{{ $trt !== null ? $trt : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center;">{{ $prk !== null ? $prk : '-' }}</td>
     </tr>
     @endforeach
     
     <!-- JUMLAH NILAI & RATA-RATA -->
     <tr>
         <td colspan="2" style="border: 1px solid #000; text-align: center; font-weight: bold;">JUMLAH NILAI</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ $student->grades->sum('pr') }}</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ $student->grades->sum('uh') }}</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ $student->grades->sum('tertulis') }}</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ $student->grades->sum('praktek') }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allPr) > 0 ? array_sum($allPr) : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allUh) > 0 ? array_sum($allUh) : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allTertulis) > 0 ? array_sum($allTertulis) : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allPraktek) > 0 ? array_sum($allPraktek) : '-' }}</td>
     </tr>
     <tr>
         <td colspan="2" style="border: 1px solid #000; text-align: center; font-weight: bold;">RATA-RATA</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ number_format($student->grades->avg('pr') ?? 0, 1) }}</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ number_format($student->grades->avg('uh') ?? 0, 1) }}</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ number_format($student->grades->avg('tertulis') ?? 0, 1) }}</td>
-        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ number_format($student->grades->avg('praktek') ?? 0, 1) }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allPr) > 0 ? number_format(array_sum($allPr) / count($allPr), 1) : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allUh) > 0 ? number_format(array_sum($allUh) / count($allUh), 1) : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allTertulis) > 0 ? number_format(array_sum($allTertulis) / count($allTertulis), 1) : '-' }}</td>
+        <td style="border: 1px solid #000; text-align: center; font-weight: bold;">{{ count($allPraktek) > 0 ? number_format(array_sum($allPraktek) / count($allPraktek), 1) : '-' }}</td>
     </tr>
     
     <tr><td colspan="6"></td></tr>

@@ -9,9 +9,14 @@
                     Ubah nama sekolah, alamat, judul kegiatan (misal: UTS, PTS, PAS), tanggal, dan nama penandatangan raport.
                 </p>
             </div>
-            <a href="{{ route('reports.index') }}" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-lg shadow-sm text-xs transition-all">
-                Kembali ke Raport
-            </a>
+            <div class="flex items-center gap-2.5">
+                <a href="{{ route('portal') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg border border-slate-300 text-xs transition-colors">
+                    ⌂ Portal Utama
+                </a>
+                <a href="{{ route('reports.index') }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg shadow-sm text-xs transition-all">
+                    Kembali ke Raport UTS
+                </a>
+            </div>
         </div>
     </x-slot>
 

@@ -10,10 +10,10 @@
         </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
-                <form action="{{ route('subjects.update', $subject->id) }}" method="POST" class="space-y-6">
+    <div class="py-4 sm:py-8">
+        <div class="max-w-2xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:shadow-xl rounded-xl sm:rounded-lg p-4 sm:p-6 border border-gray-200 sm:border-0">
+                <form action="{{ route('subjects.update', $subject->id) }}" method="POST" class="space-y-5">
                     @csrf
                     @method('PUT')
 
@@ -33,9 +33,9 @@
 
                     <!-- Nomor Urut -->
                     <div>
-                        <x-input-label for="order_number" :value="__('Nomor Urut Tampilan *')" />
-                        <x-text-input id="order_number" name="order_number" type="number" class="mt-1 block w-full" :value="old('order_number', $subject->order_number)" required min="1" />
-                        <p class="text-xs text-gray-500 mt-1">Urutan posisi pada tabel dan format cetak raport Excel.</p>
+                        <x-input-label for="order_number" :value="__('Nomor Urut Tampilan')" />
+                        <x-text-input id="order_number" name="order_number" type="number" class="mt-1 block w-full bg-gray-50" :value="old('order_number', $subject->order_number)" min="1" />
+                        <p class="text-xs text-gray-500 mt-1">Nomor urut posisi mata pelajaran. Anda juga bisa menaikkan/menurunkan urutan dengan tombol ⬆ / ⬇ di daftar mata pelajaran.</p>
                         <x-input-error class="mt-2" :messages="$errors->get('order_number')" />
                     </div>
 

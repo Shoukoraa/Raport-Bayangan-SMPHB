@@ -11,11 +11,25 @@ use Illuminate\View\View;
 
 class StudentController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $students = Student::with(['classroom', 'academicYear'])->paginate(15);
+        $status = $request->query('status', 'active');
+        $activeCount = Student::count();
+        $trashedCount = Student::onlyTrashed()->count();
 
-        return view('students.index', compact('students'));
+        if ($status === 'trashed') {
+            $students = Student::onlyTrashed()
+                ->with(['classroom', 'academicYear'])
+                ->latest('deleted_at')
+                ->paginate(15)
+                ->withQueryString();
+        } else {
+            $students = Student::with(['classroom', 'academicYear'])
+                ->paginate(15)
+                ->withQueryString();
+        }
+
+        return view('students.index', compact('students', 'status', 'activeCount', 'trashedCount'));
     }
 
     public function create(): View
@@ -81,11 +95,31 @@ class StudentController extends Controller
 
     public function destroy(Student $student): RedirectResponse
     {
-        // Delete related grades and attendance if any
-        $student->grades()->delete();
-        $student->attendance()->delete();
+        $name = $student->name;
         $student->delete();
 
-        return redirect()->route('students.index')->with('success', 'Data siswa berhasil dihapus.');
+        return redirect()->route('students.index')->with('success', "Data siswa '{$name}' berhasil dipindahkan ke tempat sampah (soft delete). Data otomatis disembunyikan dari Raport dan Input Nilai.");
+    }
+
+    public function restore(string $id): RedirectResponse
+    {
+        $student = Student::onlyTrashed()->findOrFail($id);
+        $name = $student->name;
+        $student->restore();
+
+        return redirect()->route('students.index', ['status' => 'trashed'])->with('success', "Data siswa '{$name}' berhasil dipulihkan dan kembali aktif di Raport serta Input Nilai.");
+    }
+
+    public function forceDelete(string $id): RedirectResponse
+    {
+        $student = Student::onlyTrashed()->findOrFail($id);
+        $name = $student->name;
+
+        // Permanently delete associated records
+        $student->grades()->delete();
+        $student->attendance()->delete();
+        $student->forceDelete();
+
+        return redirect()->route('students.index', ['status' => 'trashed'])->with('success', "Data siswa '{$name}' telah dihapus secara permanen dari database.");
     }
 }
